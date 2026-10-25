@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import badge %}
+{% block title %}Shortage report{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Attendance shortage report</h1><p class="sub">Student-courses below 75%. Students in this list are debarred from upcoming exams of that course.</p></div>
+  <div class="actions no-print"><a class="btn ghost" href="{{ url_for('shortage_csv', course_id=course_id or '', department_id=dept_id or '', include_warning='1' if include_warning else '') }}">Download CSV</a>
+  <button class="btn ghost" onclick="window.print()">Print</button></div></div>
+<div class="card">
+  <form method="get" class="fields no-print" style="margin-bottom:1rem">
+    <label>Course<select name="course_id"><option value="">All</option>{% for c in courses %}<option value="{{ c.course_id }}" {{ 'selected' if course_id == c.course_id }}>{{ c.course_code }} – {{ c.course_name }}</option>{% endfor %}</select></label>
+    <label>Department<select name="department_id"><option value="">All</option>{% for d in depts %}<option value="{{ d.department_id }}" {{ 'selected' if dept_id == d.department_id }}>{{ d.dept_code }}</option>{% endfor %}</select></label>
+    <label class="check" style="align-self:end"><input type="checkbox" name="include_warning" value="1" {{ 'checked' if include_warning }}> Also show Warning (75–79%)</label>
+    <label>&nbsp;<button class="btn" type="submit">Apply</button></label>
+  </form>
+  {% if rows %}<div class="table-wrap"><table>
+    <tr><th>Roll no</th><th>Student</th><th>Dept</th><th>Course</th><th class="num">Attended</th><th class="num">Held</th><th class="num">%</th><th>Status</th><th class="num">Classes needed for 75%</th></tr>
+    {% for r in rows %}<tr><td>{{ r.roll_no }}</td><td><a href="{{ url_for('student_detail', student_id=r.student_id) }}">{{ r.student_name }}</a></td><td>{{ r.dept_code }}</td><td>{{ r.course_code }}</td>
+      <td class="num">{{ r.attended }}</td><td class="num">{{ r.total_sessions }}</td><td class="num">{{ r.percentage|pct }}</td><td>{{ badge(r.status) }}</td>
+      <td class="num">{{ r.needed if r.status == 'Critical' else '—' }}</td></tr>{% endfor %}
+  </table></div><p class="muted" style="margin-bottom:0">{{ rows|length }} record(s).</p>
+  {% else %}<p class="empty">No shortages for these filters.</p>{% endif %}
+</div>
+{% endblock %}

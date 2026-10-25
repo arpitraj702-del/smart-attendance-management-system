@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import badge, bar, csrf %}
+{% block title %}{{ s.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="who">
+    {% if s.has_photo %}
+      <img class="avatar lg" src="{{ url_for('student_photo', student_id=s.student_id) }}" alt="Photo of {{ s.name }}">
+    {% endif %}
+    <div>
+      <h1>{{ s.name }}</h1>
+      <p class="sub" style="margin:0">{{ s.roll_no }} · {{ s.dept_name }} · Semester {{ s.semester }}{% if s.email %} · {{ s.email }}{% endif %}</p>
+      <p style="margin:.4rem 0 0">Overall standing: {{ overall|pct }} {{ badge(overall_status) }}</p>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn ghost" onclick="document.getElementById('editStudentModal').showModal()">Edit Details</button>
+    {% if session.get('role') == 'Admin' %}
+    <form method="post" action="{{ url_for('delete_student', student_id=s.student_id) }}" onsubmit="return confirm('Permanently delete this student, face embeddings, and all attendance records?')">
+      {{ csrf() }}
+      <button class="btn danger" type="submit">Delete Student</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <h2>Course Attendance</h2>
+  {% if rows %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Course</th>
+          <th class="num">Attended</th>
+          <th class="num">Conducted</th>
+          <th style="min-width:130px">Percentage</th>
+          <th>Status</th>
+          <th class="num">Classes Needed (75%)</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td><strong>{{ r.course_code }}</strong> – {{ r.course_name }}</td>
+          <td class="num">{{ r.attended }}</td>
+          <td class="num">{{ r.total_sessions }}</td>
+          <td>{{ r.percentage|pct }}{{ bar(r.percentage, r.status) }}</td>
+          <td>{{ badge(r.status) }}</td>
+          <td class="num">{{ r.needed if r.status == 'Critical' else '—' }}</td>
+          <td>
+            <form class="inline" method="post" action="{{ url_for('unenroll', student_id=s.student_id, course_id=r.course_id) }}" onsubmit="return confirm('Remove enrollment in {{ r.course_code }}?')">
+              {{ csrf() }}
+              <button class="btn danger sm" type="submit">Unenroll</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="empty">Not enrolled in any course yet.</p>
+  {% endif %}
+  {% if available %}
+  <form method="post" action="{{ url_for('enroll', student_id=s.student_id) }}" class="actions" style="margin-top:1rem">
+    {{ csrf() }}
+    <select name="course_id" style="max-width:340px">
+      {% for c in available %}
+        <option value="{{ c.course_id }}">{{ c.course_code }} – {{ c.course_name }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn ghost" type="submit">Enroll in course</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Exam Eligibility & Debarment</h2>
+  {% if exams %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Course</th>
+          <th>Exam</th>
+          <th>Date</th>
+          <th class="num">Attendance</th>
+          <th>Eligibility</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in exams %}
+        <tr>
+          <td><strong>{{ e.course_code }}</strong></td>
+          <td>{{ e.exam_type }}</td>
+          <td>{{ e.exam_date|fmt_date }}</td>
+          <td class="num">{{ e.percentage|pct }}</td>
+          <td>
+            {% if e.status == 'Critical' %}
+              <span class="badge badge-critical">Debarred (&lt;75%)</span>
+            {% else %}
+              <span class="badge badge-good">Eligible</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="empty">No upcoming exams scheduled for enrolled courses.</p>
+  {% endif %}
+</div>
+
+<!-- Edit Student Modal -->
+<dialog id="editStudentModal" class="modal">
+  <div class="modal-head">
+    <h2>Edit Student Details</h2>
+    <button type="button" class="modal-close" onclick="document.getElementById('editStudentModal').close()">&times;</button>
+  </div>
+  <form method="post" action="{{ url_for('edit_student', student_id=s.student_id) }}" class="stack">
+    {{ csrf() }}
+    <label>Roll Number (Permanent)
+      <input value="{{ s.roll_no }}" disabled style="opacity:0.7">
+    </label>
+    <label>Full Name
+      <input name="name" value="{{ s.name }}" required maxlength="100">
+    </label>
+    <label>Email Address
+      <input name="email" type="email" value="{{ s.email or '' }}" maxlength="120" placeholder="e.g. rollno@institution.edu">
+    </label>
+    <div class="fields">
+      <label>Department
+        <select name="department_id" required>
+          {% for d in depts %}
+            <option value="{{ d.department_id }}" {{ 'selected' if d.department_id == s.department_id }}>{{ d.dept_code }} – {{ d.dept_name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Semester
+        <input name="semester" type="number" min="1" max="12" value="{{ s.semester }}" required>
+      </label>
+    </div>
+    <div class="actions" style="margin-top:0.5rem; justify-content:flex-end;">
+      <button type="button" class="btn ghost" onclick="document.getElementById('editStudentModal').close()">Cancel</button>
+      <button type="submit" class="btn">Save Changes</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

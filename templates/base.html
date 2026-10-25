@@ -1,0 +1,54 @@
+{% from '_macros.html' import icon %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}Smart Attendance{% endblock %} · Smart Attendance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+{% if session.get('user') %}
+<div class="topbar"><button id="navToggle" aria-label="Open menu">{{ icon('menu') }}</button><strong>Smart Attendance</strong></div>
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="mark">{{ icon('video') }}</span> Smart Attendance</div>
+    <div class="user-profile">
+      <span class="uname">{{ session.get('username') or session.get('user') }}</span>
+      <span class="urole"><span class="badge badge-{{ session.get('role', 'Faculty')|lower }}">{{ session.get('role', 'Faculty') }}</span></span>
+    </div>
+    <nav>
+      {% set items = [('dashboard','Dashboard','grid'),('students','Students','users'),('register_student','Register student','user-plus'),
+                      ('academics','Academics','book'),('sessions','Class sessions','video'),('exams','Exams & debarment','file'),
+                      ('shortage_report','Shortage report','alert')] %}
+      {% for ep, label, ic in items %}
+        <a href="{{ url_for(ep) }}" class="{{ 'active' if request.endpoint == ep else '' }}">{{ icon(ic) }}{{ label }}</a>
+      {% endfor %}
+      {% if session.get('role') == 'Admin' %}
+        <a href="{{ url_for('users_list') }}" class="{{ 'active' if request.endpoint == 'users_list' else '' }}">{{ icon('shield') }}User management</a>
+      {% endif %}
+    </nav>
+    <form method="post" action="{{ url_for('logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="link" type="submit">{{ icon('out') }}Log out</button></form>
+  </aside>
+  <main class="main">
+{% else %}
+  <main>
+{% endif %}
+    {% if session.get('user') and not models_ready %}
+      <div class="flash warn">Face recognition models are missing. Open a terminal in the project folder and run <code>python download_models.py</code>.</div>
+    {% endif %}
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in msgs %}<div class="flash {{ cat }}" role="status">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+{% if session.get('user') %}</div>{% endif %}
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

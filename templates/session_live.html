@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import badge, csrf %}
+{% block title %}{{ sess.course_code }} attendance{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ sess.course_code }} · {{ sess.course_name }}</h1>
+  <p class="sub">{{ sess.session_date|fmt_date }}, {{ sess.start_time|fmt_time }}–{{ sess.end_time|fmt_time }}{% if sess.room %} · Room {{ sess.room }}{% endif %} · {{ badge(sess.status) }}</p></div>
+  <div class="actions">
+    {% if sess.status == 'Scheduled' %}<form method="post" action="{{ url_for('open_session', session_id=sess.session_id) }}">{{ csrf() }}<button class="btn">Start session</button></form>{% endif %}
+    {% if sess.status == 'Open' %}<form method="post" action="{{ url_for('close_session', session_id=sess.session_id) }}" onsubmit="return confirm('Close this session? Attendance can no longer be marked.')">{{ csrf() }}<button class="btn danger">Close session</button></form>{% endif %}
+    <a class="btn ghost" href="{{ url_for('sessions') }}">All sessions</a></div></div>
+
+<div class="live-layout">
+  <div>
+    {% if sess.status == 'Open' %}
+      <div class="stage"><video id="video" playsinline muted></video><canvas id="overlay"></canvas><div class="hint" id="hint">Camera is off</div></div>
+      <div class="actions" style="margin-top:.7rem"><button id="startBtn" class="btn">Start camera</button><button id="stopBtn" class="btn ghost" disabled>Stop camera</button></div>
+      <div id="status" class="live-status" role="status" aria-live="polite">Press “Start camera”. Each face must be recognised in {{ cfg.CONFIRM_FRAMES }} consecutive checks before it is marked.</div>
+    {% else %}
+      <div class="card"><p class="empty">{{ 'Start the session to open the camera.' if sess.status == 'Scheduled' else 'This session is closed. Attendance is read-only.' }}</p></div>
+    {% endif %}
+  </div>
+  <div>
+    <div class="card"><h2>Present <span id="presentCount">{{ sess.present }}</span> / {{ sess.enrolled }}</h2>
+      <ul class="log" id="log">
+        {% for p in present_rows %}<li data-id="{{ p.student_id }}"><span><strong>{{ p.name }}</strong> <span class="muted">{{ p.roll_no }}</span></span><span class="muted">{{ p.marked_at.strftime('%H:%M:%S') }}</span></li>{% endfor %}
+      </ul>
+      {% if not present_rows %}<p class="empty" id="logEmpty">Nobody marked yet.</p>{% endif %}
+    </div>
+    <div class="card"><h2>Not marked ({{ absent|length }})</h2>
+      {% if absent %}<ul class="log">{% for a in absent %}<li><span>{{ a.name }}</span><span class="muted">{{ a.roll_no }}</span></li>{% endfor %}</ul>
+      {% else %}<p class="empty">Every enrolled student is present.</p>{% endif %}
+      <p class="muted" style="font-size:.85rem;margin-bottom:0">Reload the page to refresh this list.</p></div>
+  </div>
+</div>
+<div id="live-config" data-session="{{ sess.session_id }}" hidden></div>
+{% endblock %}
+{% block scripts %}{% if sess.status == 'Open' %}<script src="{{ url_for('static', filename='js/attend.js') }}"></script>{% endif %}{% endblock %}

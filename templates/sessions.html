@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import badge, csrf, render_pagination %}
+{% block title %}Class Sessions{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Class Sessions</h1>
+    <p class="sub">Attendance can only be captured while a class session is Open. Closed sessions contribute to student attendance records.</p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Schedule / Start Session</h2>
+  <form method="post" action="{{ url_for('create_session') }}" class="stack">
+    {{ csrf() }}
+    <div class="fields">
+      <label>Course
+        <select name="course_id" required>
+          {% for c in courses %}
+            <option value="{{ c.course_id }}">{{ c.course_code }} – {{ c.course_name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Date
+        <input type="date" name="session_date" value="{{ today.isoformat() }}" required>
+      </label>
+      <label>Start Time
+        <input type="time" name="start_time" value="09:00" required>
+      </label>
+      <label>End Time
+        <input type="time" name="end_time" value="10:00" required>
+      </label>
+      <label>Classroom / Venue
+        <input name="room" maxlength="30" placeholder="e.g. Lab 304">
+      </label>
+      <label>Lecture Topic
+        <input name="topic" maxlength="150" placeholder="e.g. Relational Normalization">
+      </label>
+    </div>
+    <label class="check">
+      <input type="checkbox" name="start_now" checked> Start session immediately and open camera recognition
+    </label>
+    <div>
+      <button class="btn" type="submit" {{ 'disabled' if not courses }}>Create Session</button>
+      {% if not courses %}
+        <span class="muted"> No courses assigned. Check academic assignments.</span>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1rem;">
+    <h2>Sessions History</h2>
+    <form method="get" class="actions" style="margin:0">
+      <select name="status" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        {% for s in ['Scheduled','Open','Closed'] %}
+          <option {{ 'selected' if status == s }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+      <select name="course_id" onchange="this.form.submit()">
+        <option value="">All Courses</option>
+        {% for c in all_courses %}
+          <option value="{{ c.course_id }}" {{ 'selected' if course_id == c.course_id }}>{{ c.course_code }}</option>
+        {% endfor %}
+      </select>
+      {% if status or course_id %}
+        <a class="btn ghost sm" href="{{ url_for('sessions') }}">Clear Filters</a>
+      {% endif %}
+    </form>
+  </div>
+
+  {% if rows %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Course</th>
+          <th>Faculty</th>
+          <th>Room</th>
+          <th class="num">Present</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.session_date|fmt_date }}</td>
+          <td>{{ r.start_time|fmt_time }}–{{ r.end_time|fmt_time }}</td>
+          <td><strong>{{ r.course_code }}</strong></td>
+          <td>{{ r.faculty_name or '—' }}</td>
+          <td>{{ r.room or '—' }}</td>
+          <td class="num">{{ r.present }}/{{ r.enrolled }}</td>
+          <td>{{ badge(r.status) }}</td>
+          <td class="actions">
+            {% if r.status == 'Scheduled' %}
+              <form class="inline" method="post" action="{{ url_for('open_session', session_id=r.session_id) }}">
+                {{ csrf() }}
+                <button class="btn sm" type="submit">Start</button>
+              </form>
+              <button class="btn ghost sm" onclick="openEditSessionModal({{ r.session_id }}, '{{ r.session_date.strftime('%Y-%m-%d') if r.session_date else '' }}', '{{ r.start_time|fmt_time }}', '{{ r.end_time|fmt_time }}', '{{ (r.room or '')|replace("'", "\\'") }}', '{{ (r.topic or '')|replace("'", "\\'") }}')">Edit</button>
+              <form class="inline" method="post" action="{{ url_for('delete_session', session_id=r.session_id) }}" onsubmit="return confirm('Delete this scheduled session?')">
+                {{ csrf() }}
+                <button class="btn danger sm" type="submit">Delete</button>
+              </form>
+            {% elif r.status == 'Open' %}
+              <a class="btn sm" href="{{ url_for('session_live', session_id=r.session_id) }}">Take Attendance</a>
+            {% else %}
+              <a class="btn ghost sm" href="{{ url_for('session_live', session_id=r.session_id) }}">View Record</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ render_pagination(pagination, 'sessions') }}
+  {% else %}
+    <p class="empty">No class sessions found matching your filters.</p>
+  {% endif %}
+</div>
+
+<!-- Edit Session Modal -->
+<dialog id="editSessionModal" class="modal">
+  <div class="modal-head">
+    <h2>Edit Scheduled Session</h2>
+    <button type="button" class="modal-close" onclick="document.getElementById('editSessionModal').close()">&times;</button>
+  </div>
+  <form id="editSessionForm" method="post" action="" class="stack">
+    {{ csrf() }}
+    <label>Session Date
+      <input type="date" name="session_date" id="editSessionDate" required>
+    </label>
+    <div class="fields">
+      <label>Start Time
+        <input type="time" name="start_time" id="editSessionStart" required>
+      </label>
+      <label>End Time
+        <input type="time" name="end_time" id="editSessionEnd" required>
+      </label>
+    </div>
+    <label>Classroom / Room
+      <input name="room" id="editSessionRoom" maxlength="30">
+    </label>
+    <label>Topic / Lecture Notes
+      <input name="topic" id="editSessionTopic" maxlength="150">
+    </label>
+    <div class="actions" style="margin-top:0.5rem; justify-content:flex-end;">
+      <button type="button" class="btn ghost" onclick="document.getElementById('editSessionModal').close()">Cancel</button>
+      <button type="submit" class="btn">Update Session</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+function openEditSessionModal(sessionId, sDate, start, end, room, topic) {
+  document.getElementById('editSessionForm').action = '/sessions/' + sessionId + '/edit';
+  document.getElementById('editSessionDate').value = sDate;
+  document.getElementById('editSessionStart').value = start;
+  document.getElementById('editSessionEnd').value = end;
+  document.getElementById('editSessionRoom').value = room;
+  document.getElementById('editSessionTopic').value = topic;
+  document.getElementById('editSessionModal').showModal();
+}
+</script>
+{% endblock %}

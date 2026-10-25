@@ -1,0 +1,38 @@
+# Environments & Virtual Envs
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Sensitive environment variables & secrets (CRITICAL)
+.env
+.env.local
+.env.*.local
+
+# Machine Learning Large Weights (downloaded via download_models.py)
+models/*.onnx
+!models/.gitkeep
+
+# User uploaded student face thumbnails
+uploads/faces/*.jpg
+!uploads/faces/.gitkeep
+
+# IDE & Editor folders
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Database dumps & backups
+backups/*.sql
+*.sql.gz
+smart_attendance_backup*
+*.zip
+*.tar.gz

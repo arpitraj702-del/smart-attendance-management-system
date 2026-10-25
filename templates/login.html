@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<div class="login-wrap"><div class="card login-card">
+  <h1>Smart Attendance</h1>
+  <p class="sub">Sign in with your administrator or faculty credentials.</p>
+  <form method="post" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Username or Email<input name="username" autocomplete="username" required autofocus placeholder="admin or username@institution.edu"></label>
+    <label>Password<input name="password" type="password" autocomplete="current-password" required placeholder="Enter your password"></label>
+    <button class="btn" type="submit">Log in</button>
+  </form>
+</div></div>
+{% endblock %}

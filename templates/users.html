@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf %}
+{% block title %}User Management{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>User Management</h1>
+    <p class="sub">Manage system authentication, administrator accounts, and faculty credentials.</p>
+  </div>
+  <button class="btn" onclick="document.getElementById('createUserModal').showModal()">Create New User</button>
+</div>
+
+<div class="card">
+  <h2>System Users</h2>
+  {% if users %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Linked Faculty</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u.user_id }}</td>
+          <td><strong>{{ u.username }}</strong></td>
+          <td>{{ u.email }}</td>
+          <td>
+            <span class="badge badge-{{ u.role|lower }}">{{ u.role }}</span>
+          </td>
+          <td>{{ u.faculty.name if u.faculty else '—' }}</td>
+          <td>
+            {% if u.is_active %}
+              <span class="badge badge-good">Active</span>
+            {% else %}
+              <span class="badge badge-critical">Disabled</span>
+            {% endif %}
+          </td>
+          <td>{{ u.created_at.strftime('%d %b %Y') if u.created_at else '—' }}</td>
+          <td class="actions">
+            <button class="btn ghost sm" onclick="openEditModal({{ u.user_id }}, '{{ u.username }}', '{{ u.email }}', '{{ u.role }}', '{{ u.faculty_id or '' }}', {{ 1 if u.is_active else 0 }})">Edit</button>
+            {% if u.user_id != session.get('user_id') %}
+            <form class="inline" method="post" action="{{ url_for('user_delete', user_id=u.user_id) }}" onsubmit="return confirm('Are you sure you want to delete user {{ u.username }}?')">
+              {{ csrf() }}
+              <button class="btn danger sm" type="submit">Delete</button>
+            </form>
+            {% else %}
+              <span class="muted" style="font-size:0.8rem">(Current)</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="empty">No users configured.</p>
+  {% endif %}
+</div>
+
+<!-- Create User Modal -->
+<dialog id="createUserModal" class="modal">
+  <div class="modal-head">
+    <h2>Create New User</h2>
+    <button type="button" class="modal-close" onclick="document.getElementById('createUserModal').close()">&times;</button>
+  </div>
+  <form method="post" action="{{ url_for('user_create') }}" class="stack">
+    {{ csrf() }}
+    <label>Username
+      <input name="username" required minlength="3" maxlength="50" placeholder="e.g. jdoe">
+    </label>
+    <label>Email Address
+      <input name="email" type="email" required maxlength="120" placeholder="e.g. jdoe@institution.edu">
+    </label>
+    <label>Initial Password
+      <input name="password" type="password" required minlength="6" placeholder="Minimum 6 characters">
+    </label>
+    <div class="fields">
+      <label>Role
+        <select name="role" id="newRoleSelect" onchange="toggleFacultyField(this, 'newFacultyField')">
+          <option value="Faculty" selected>Faculty</option>
+          <option value="Admin">Admin</option>
+        </select>
+      </label>
+      <label id="newFacultyField">Link to Faculty Profile
+        <select name="faculty_id">
+          <option value="">— Select Faculty —</option>
+          {% for f in faculty_list %}
+            <option value="{{ f.faculty_id }}">{{ f.name }} ({{ f.department.dept_code }})</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+    <div class="actions" style="margin-top:0.5rem; justify-content:flex-end;">
+      <button type="button" class="btn ghost" onclick="document.getElementById('createUserModal').close()">Cancel</button>
+      <button type="submit" class="btn">Create User</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Edit User Modal -->
+<dialog id="editUserModal" class="modal">
+  <div class="modal-head">
+    <h2>Edit User: <span id="editModalUsername"></span></h2>
+    <button type="button" class="modal-close" onclick="document.getElementById('editUserModal').close()">&times;</button>
+  </div>
+  <form id="editUserForm" method="post" action="" class="stack">
+    {{ csrf() }}
+    <label>Email Address
+      <input name="email" id="editEmail" type="email" required maxlength="120">
+    </label>
+    <div class="fields">
+      <label>Role
+        <select name="role" id="editRoleSelect" onchange="toggleFacultyField(this, 'editFacultyField')">
+          <option value="Faculty">Faculty</option>
+          <option value="Admin">Admin</option>
+        </select>
+      </label>
+      <label id="editFacultyField">Link to Faculty Profile
+        <select name="faculty_id" id="editFacultySelect">
+          <option value="">— None —</option>
+          {% for f in faculty_list %}
+            <option value="{{ f.faculty_id }}">{{ f.name }} ({{ f.department.dept_code }})</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+    <label>Account Status
+      <select name="is_active" id="editIsActive">
+        <option value="1">Active</option>
+        <option value="0">Disabled (Revoke Access)</option>
+      </select>
+    </label>
+    <label>Reset Password (leave empty to keep current password)
+      <input name="new_password" type="password" minlength="6" placeholder="New password (optional)">
+    </label>
+    <div class="actions" style="margin-top:0.5rem; justify-content:flex-end;">
+      <button type="button" class="btn ghost" onclick="document.getElementById('editUserModal').close()">Cancel</button>
+      <button type="submit" class="btn">Save Changes</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+function toggleFacultyField(roleSelect, fieldId) {
+  const field = document.getElementById(fieldId);
+  if (roleSelect.value === 'Admin') {
+    field.style.display = 'none';
+  } else {
+    field.style.display = 'grid';
+  }
+}
+
+function openEditModal(userId, username, email, role, facultyId, isActive) {
+  document.getElementById('editModalUsername').textContent = username;
+  document.getElementById('editUserForm').action = '/users/' + userId + '/edit';
+  document.getElementById('editEmail').value = email;
+  document.getElementById('editRoleSelect').value = role;
+  document.getElementById('editFacultySelect').value = facultyId;
+  document.getElementById('editIsActive').value = isActive ? '1' : '0';
+  toggleFacultyField(document.getElementById('editRoleSelect'), 'editFacultyField');
+  document.getElementById('editUserModal').showModal();
+}
+</script>
+{% endblock %}

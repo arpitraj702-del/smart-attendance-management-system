@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import badge %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Dashboard</h1>
+  <p class="sub">Attendance is counted per course: sessions attended ÷ sessions held.</p></div>
+  <div class="legend"><span class="badge badge-good">Good ≥ 80%</span><span class="badge badge-warning">Warning 75–79%</span><span class="badge badge-critical">Critical &lt; 75%</span></div>
+</div>
+
+<div class="grid kpis" style="margin-bottom:1.1rem">
+  <div class="card kpi"><div class="n">{{ kpi.students }}</div><div class="l">Students</div></div>
+  <div class="card kpi"><div class="n">{{ kpi.courses }}</div><div class="l">Courses</div></div>
+  <div class="card kpi"><div class="n">{{ kpi.conducted }}</div><div class="l">Sessions held</div></div>
+  <div class="card kpi"><div class="n">{{ kpi.present_today }}</div><div class="l">Marked present today</div></div>
+  <div class="card kpi crit"><div class="n">{{ kpi.critical }}</div><div class="l">Student-courses below 75%</div></div>
+</div>
+
+<div class="grid two">
+  <div class="card"><h2>Attendance status</h2><div class="chart-box"><canvas id="statusChart"></canvas></div></div>
+  <div class="card"><h2>Average attendance by course</h2><div class="chart-box"><canvas id="courseChart"></canvas></div></div>
+</div>
+<div class="card"><h2>Daily attendance rate (last 14 days)</h2><div class="chart-box"><canvas id="trendChart"></canvas></div></div>
+
+<div class="grid two">
+  <div class="card"><h2>Today's sessions</h2>
+    {% if today_sessions %}<div class="table-wrap"><table>
+      <tr><th>Course</th><th>Time</th><th>Room</th><th>Status</th><th></th></tr>
+      {% for s in today_sessions %}<tr><td>{{ s.course_code }}</td><td>{{ s.start_time|fmt_time }}–{{ s.end_time|fmt_time }}</td><td>{{ s.room or '—' }}</td>
+        <td>{{ badge(s.status) }}</td><td><a href="{{ url_for('session_live', session_id=s.session_id) }}">Open</a></td></tr>{% endfor %}
+    </table></div>{% else %}<p class="empty">No sessions today. <a href="{{ url_for('sessions') }}">Schedule one</a>.</p>{% endif %}
+  </div>
+  <div class="card"><h2>Upcoming exams</h2>
+    {% if exams %}<div class="table-wrap"><table>
+      <tr><th>Course</th><th>Type</th><th>Date</th><th class="num">Debarred</th></tr>
+      {% for e in exams %}<tr><td><a href="{{ url_for('exam_detail', exam_id=e.exam_id) }}">{{ e.course_code }}</a></td><td>{{ e.exam_type }}</td><td>{{ e.exam_date|fmt_date }}</td><td class="num">{{ e.debarred }}</td></tr>{% endfor %}
+    </table></div>{% else %}<p class="empty">No upcoming exams scheduled.</p>{% endif %}
+  </div>
+</div>
+
+<div class="card"><div class="page-head"><h2>Lowest attendance (Critical)</h2><a href="{{ url_for('shortage_report') }}">Full shortage report</a></div>
+  {% if critical %}<div class="table-wrap"><table>
+    <tr><th>Roll no</th><th>Student</th><th>Course</th><th class="num">Attended</th><th class="num">%</th><th>Status</th></tr>
+    {% for r in critical %}<tr><td>{{ r.roll_no }}</td><td><a href="{{ url_for('student_detail', student_id=r.student_id) }}">{{ r.student_name }}</a></td><td>{{ r.course_code }}</td>
+      <td class="num">{{ r.attended }}/{{ r.total_sessions }}</td><td class="num">{{ r.percentage|pct }}</td><td>{{ badge(r.status) }}</td></tr>{% endfor %}
+  </table></div>{% else %}<p class="empty">No student is below 75% right now.</p>{% endif %}
+</div>
+<script id="dash-data" type="application/json">{{ chart|tojson }}</script>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

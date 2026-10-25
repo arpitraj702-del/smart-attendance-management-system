@@ -1,0 +1,14 @@
+.env
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.git
+.gitignore
+.idea
+.vscode
+uploads/faces/*.jpg
+*.tar.gz
+*.zip
+smart_attendance_backup*

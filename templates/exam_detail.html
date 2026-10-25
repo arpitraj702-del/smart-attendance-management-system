@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import badge %}
+{% block title %}{{ ex.course_code }} {{ ex.exam_type }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ ex.course_code }} · {{ ex.exam_type }}</h1>
+  <p class="sub">{{ ex.course_name }} · {{ ex.exam_date|fmt_date }}, {{ ex.start_time|fmt_time }}–{{ ex.end_time|fmt_time }}{% if ex.venue %} · {{ ex.venue }}{% endif %}</p></div>
+  <div class="actions no-print"><a class="btn ghost" href="{{ url_for('exam_debarred_csv', exam_id=ex.exam_id) }}">Download debarred list</a><button class="btn ghost" onclick="window.print()">Print</button><a class="btn ghost" href="{{ url_for('exams') }}">All exams</a></div></div>
+<div class="card"><h2>Debarred students ({{ debarred|length }})</h2>
+  {% if debarred %}<div class="table-wrap"><table><tr><th>Roll no</th><th>Name</th><th class="num">Attended</th><th class="num">Held</th><th class="num">%</th><th>Status</th></tr>
+    {% for d in debarred %}<tr><td>{{ d.roll_no }}</td><td>{{ d.name }}</td><td class="num">{{ d.attended_sessions }}</td><td class="num">{{ d.total_sessions }}</td><td class="num">{{ '%.1f'|format(d.attendance_pct) }}%</td><td><span class="badge badge-critical">Debarred</span></td></tr>{% endfor %}</table></div>
+  {% else %}<p class="empty">No student is debarred for this exam.</p>{% endif %}</div>
+<div class="card"><h2>Eligible students ({{ eligible|length }})</h2>
+  {% if eligible %}<div class="table-wrap"><table><tr><th>Roll no</th><th>Name</th><th class="num">%</th><th>Status</th></tr>
+    {% for e in eligible %}<tr><td>{{ e.roll_no }}</td><td>{{ e.student_name }}</td><td class="num">{{ e.percentage|pct }}</td><td>{{ badge(e.status) }}</td></tr>{% endfor %}</table></div>
+  {% else %}<p class="empty">No eligible students.</p>{% endif %}
+  <p class="muted" style="margin-bottom:0">“No Classes” means no session has been held yet, so nobody is debarred.</p></div>
+{% endblock %}

@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf %}
+{% block title %}Academics{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Academics</h1>
+    <p class="sub">Departments, faculty members, and course offerings. Items still referenced in sessions cannot be deleted.</p>
+  </div>
+  {% if session.get('role') != 'Admin' %}
+    <span class="badge badge-faculty">Faculty View (Read-Only)</span>
+  {% endif %}
+</div>
+
+{% if session.get('role') != 'Admin' %}
+  <div class="flash warn">You are signed in as Faculty. You can view departments, faculty, and courses. Managing academic structures requires Administrator privileges.</div>
+{% endif %}
+
+<!-- Departments -->
+<div class="card">
+  <h2>Departments</h2>
+  {% if session.get('role') == 'Admin' %}
+  <form method="post" action="{{ url_for('add_department') }}" class="fields" style="margin-bottom:1rem">
+    {{ csrf() }}
+    <label>Code<input name="dept_code" required maxlength="10" placeholder="e.g. CSE"></label>
+    <label>Name<input name="dept_name" required maxlength="100" placeholder="e.g. Computer Science and Engineering"></label>
+    <label>&nbsp;<button class="btn" type="submit">Add department</button></label>
+  </form>
+  {% endif %}
+  {% if depts %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Name</th>
+          <th class="num">Students</th>
+          {% if session.get('role') == 'Admin' %}<th>Actions</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in depts %}
+        <tr>
+          <td><strong>{{ d.dept_code }}</strong></td>
+          <td>{{ d.dept_name }}</td>
+          <td class="num">{{ d.students }}</td>
+          {% if session.get('role') == 'Admin' %}
+          <td class="actions">
+            <button class="btn ghost sm" onclick="openEditDeptModal({{ d.department_id }}, '{{ d.dept_code }}', '{{ d.dept_name|replace("'", "\\'") }}')">Edit</button>
+            <form class="inline" method="post" action="{{ url_for('delete_academic', kind='department', item_id=d.department_id) }}" onsubmit="return confirm('Delete department {{ d.dept_code }}?')">
+              {{ csrf() }}
+              <button class="btn danger sm" type="submit">Delete</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="empty">No departments yet.</p>
+  {% endif %}
+</div>
+
+<!-- Faculty -->
+<div class="card">
+  <h2>Faculty</h2>
+  {% if session.get('role') == 'Admin' %}
+  <form method="post" action="{{ url_for('add_faculty') }}" class="fields" style="margin-bottom:1rem">
+    {{ csrf() }}
+    <label>Name<input name="name" required maxlength="100" placeholder="e.g. Dr. John Doe"></label>
+    <label>Email<input name="email" type="email" required placeholder="e.g. jdoe@example.edu"></label>
+    <label>Phone<input name="phone" maxlength="20" placeholder="Optional phone"></label>
+    <label>Department
+      <select name="department_id" required>
+        {% for d in depts %}
+          <option value="{{ d.department_id }}">{{ d.dept_code }} – {{ d.dept_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>&nbsp;<button class="btn" type="submit">Add faculty</button></label>
+  </form>
+  {% endif %}
+  {% if faculty %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Phone</th>
+          <th>Dept</th>
+          {% if session.get('role') == 'Admin' %}<th>Actions</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in faculty %}
+        <tr>
+          <td><strong>{{ f.name }}</strong></td>
+          <td>{{ f.email }}</td>
+          <td>{{ f.phone or '—' }}</td>
+          <td><span class="badge">{{ f.dept_code }}</span></td>
+          {% if session.get('role') == 'Admin' %}
+          <td class="actions">
+            <button class="btn ghost sm" onclick="openEditFacultyModal({{ f.faculty_id }}, '{{ f.name|replace("'", "\\'") }}', '{{ f.email }}', '{{ f.phone or '' }}', {{ f.department_id }})">Edit</button>
+            <form class="inline" method="post" action="{{ url_for('delete_academic', kind='faculty', item_id=f.faculty_id) }}" onsubmit="return confirm('Delete faculty member {{ f.name }}?')">
+              {{ csrf() }}
+              <button class="btn danger sm" type="submit">Delete</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="empty">No faculty members yet.</p>
+  {% endif %}
+</div>
+
+<!-- Courses -->
+<div class="card">
+  <h2>Courses</h2>
+  {% if session.get('role') == 'Admin' %}
+  <form method="post" action="{{ url_for('add_course') }}" class="fields" style="margin-bottom:1rem">
+    {{ csrf() }}
+    <label>Code<input name="course_code" required maxlength="20" placeholder="e.g. CS301"></label>
+    <label>Name<input name="course_name" required maxlength="120" placeholder="e.g. Database Management Systems"></label>
+    <label>Department
+      <select name="department_id" required>
+        {% for d in depts %}
+          <option value="{{ d.department_id }}">{{ d.dept_code }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Faculty
+      <select name="faculty_id">
+        <option value="">— none —</option>
+        {% for f in faculty %}
+          <option value="{{ f.faculty_id }}">{{ f.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Semester<input name="semester" type="number" min="1" max="12" value="1" required></label>
+    <label>Credits<input name="credits" type="number" min="1" max="10" value="3" required></label>
+    <label>&nbsp;<button class="btn" type="submit">Add course</button></label>
+  </form>
+  {% endif %}
+  {% if courses %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Name</th>
+          <th>Dept</th>
+          <th class="num">Sem</th>
+          <th>Faculty</th>
+          <th class="num">Enrolled</th>
+          {% if session.get('role') == 'Admin' %}<th>Actions</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in courses %}
+        <tr>
+          <td><strong>{{ c.course_code }}</strong></td>
+          <td>{{ c.course_name }}</td>
+          <td><span class="badge">{{ c.dept_code }}</span></td>
+          <td class="num">{{ c.semester }}</td>
+          <td>{{ c.faculty_name or '—' }}</td>
+          <td class="num">{{ c.enrolled }}</td>
+          {% if session.get('role') == 'Admin' %}
+          <td class="actions">
+            <button class="btn ghost sm" onclick="openEditCourseModal({{ c.course_id }}, '{{ c.course_code }}', '{{ c.course_name|replace("'", "\\'") }}', {{ c.department_id }}, '{{ c.faculty_id or '' }}', {{ c.semester }}, {{ c.credits }})">Edit</button>
+            <form class="inline" method="post" action="{{ url_for('delete_academic', kind='course', item_id=c.course_id) }}" onsubmit="return confirm('Delete course {{ c.course_code }} and all its sessions/attendance?')">
+              {{ csrf() }}
+              <button class="btn danger sm" type="submit">Delete</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="empty">No courses yet.</p>
+  {% endif %}
+</div>
+
+<!-- Edit Department Modal -->
+<dialog id="editDeptModal" class="modal">
+  <div class="modal-head">
+    <h2>Edit Department</h2>
+    <button type="button" class="modal-close" onclick="document.getElementById('editDeptModal').close()">&times;</button>
+  </div>
+  <form id="editDeptForm" method="post" action="" class="stack">
+    {{ csrf() }}
+    <label>Department Code
+      <input name="dept_code" id="editDeptCode" required maxlength="10">
+    </label>
+    <label>Department Name
+      <input name="dept_name" id="editDeptName" required maxlength="100">
+    </label>
+    <div class="actions" style="margin-top:0.5rem; justify-content:flex-end;">
+      <button type="button" class="btn ghost" onclick="document.getElementById('editDeptModal').close()">Cancel</button>
+      <button type="submit" class="btn">Update Department</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Edit Faculty Modal -->
+<dialog id="editFacultyModal" class="modal">
+  <div class="modal-head">
+    <h2>Edit Faculty Member</h2>
+    <button type="button" class="modal-close" onclick="document.getElementById('editFacultyModal').close()">&times;</button>
+  </div>
+  <form id="editFacultyForm" method="post" action="" class="stack">
+    {{ csrf() }}
+    <label>Full Name
+      <input name="name" id="editFacultyName" required maxlength="100">
+    </label>
+    <label>Email Address
+      <input name="email" id="editFacultyEmail" type="email" required maxlength="120">
+    </label>
+    <label>Phone Number
+      <input name="phone" id="editFacultyPhone" maxlength="20">
+    </label>
+    <label>Department
+      <select name="department_id" id="editFacultyDept" required>
+        {% for d in depts %}
+          <option value="{{ d.department_id }}">{{ d.dept_code }} – {{ d.dept_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="actions" style="margin-top:0.5rem; justify-content:flex-end;">
+      <button type="button" class="btn ghost" onclick="document.getElementById('editFacultyModal').close()">Cancel</button>
+      <button type="submit" class="btn">Update Faculty</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Edit Course Modal -->
+<dialog id="editCourseModal" class="modal">
+  <div class="modal-head">
+    <h2>Edit Course</h2>
+    <button type="button" class="modal-close" onclick="document.getElementById('editCourseModal').close()">&times;</button>
+  </div>
+  <form id="editCourseForm" method="post" action="" class="stack">
+    {{ csrf() }}
+    <div class="fields">
+      <label>Course Code
+        <input name="course_code" id="editCourseCode" required maxlength="20">
+      </label>
+      <label>Department
+        <select name="department_id" id="editCourseDept" required>
+          {% for d in depts %}
+            <option value="{{ d.department_id }}">{{ d.dept_code }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+    <label>Course Title
+      <input name="course_name" id="editCourseName" required maxlength="120">
+    </label>
+    <label>Assigned Faculty
+      <select name="faculty_id" id="editCourseFaculty">
+        <option value="">— Unassigned —</option>
+        {% for f in faculty %}
+          <option value="{{ f.faculty_id }}">{{ f.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="fields">
+      <label>Semester
+        <input name="semester" id="editCourseSem" type="number" min="1" max="12" required>
+      </label>
+      <label>Credits
+        <input name="credits" id="editCourseCredits" type="number" min="1" max="10" required>
+      </label>
+    </div>
+    <div class="actions" style="margin-top:0.5rem; justify-content:flex-end;">
+      <button type="button" class="btn ghost" onclick="document.getElementById('editCourseModal').close()">Cancel</button>
+      <button type="submit" class="btn">Update Course</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+function openEditDeptModal(deptId, code, name) {
+  document.getElementById('editDeptForm').action = '/academics/department/' + deptId + '/edit';
+  document.getElementById('editDeptCode').value = code;
+  document.getElementById('editDeptName').value = name;
+  document.getElementById('editDeptModal').showModal();
+}
+
+function openEditFacultyModal(facultyId, name, email, phone, deptId) {
+  document.getElementById('editFacultyForm').action = '/academics/faculty/' + facultyId + '/edit';
+  document.getElementById('editFacultyName').value = name;
+  document.getElementById('editFacultyEmail').value = email;
+  document.getElementById('editFacultyPhone').value = phone;
+  document.getElementById('editFacultyDept').value = deptId;
+  document.getElementById('editFacultyModal').showModal();
+}
+
+function openEditCourseModal(courseId, code, name, deptId, facultyId, sem, credits) {
+  document.getElementById('editCourseForm').action = '/academics/course/' + courseId + '/edit';
+  document.getElementById('editCourseCode').value = code;
+  document.getElementById('editCourseName').value = name;
+  document.getElementById('editCourseDept').value = deptId;
+  document.getElementById('editCourseFaculty').value = facultyId;
+  document.getElementById('editCourseSem').value = sem;
+  document.getElementById('editCourseCredits').value = credits;
+  document.getElementById('editCourseModal').showModal();
+}
+</script>
+{% endblock %}

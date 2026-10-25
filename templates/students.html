@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import badge, bar, render_pagination %}
+{% block title %}Students{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Students</h1>
+    <p class="sub">Registered students and overall attendance standing across enrolled courses.</p>
+  </div>
+  <a class="btn" href="{{ url_for('register_student') }}">Register student</a>
+</div>
+
+<div class="card">
+  <form method="get" class="fields" style="margin-bottom:1rem">
+    <label>Search
+      <input name="q" value="{{ q }}" placeholder="Name or roll number">
+    </label>
+    <label>Department
+      <select name="department_id">
+        <option value="">All Departments</option>
+        {% for d in depts %}
+          <option value="{{ d.department_id }}" {{ 'selected' if dept == d.department_id }}>{{ d.dept_code }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Semester
+      <select name="semester">
+        <option value="">All Semesters</option>
+        {% for sm in range(1, 13) %}
+          <option value="{{ sm }}" {{ 'selected' if sem == sm }}>Semester {{ sm }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div style="display:flex; gap:0.5rem; align-items:flex-end;">
+      <button class="btn" type="submit">Filter</button>
+      {% if q or dept or sem %}
+        <a class="btn ghost" href="{{ url_for('students') }}">Reset</a>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if rows %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Roll No</th>
+          <th>Name</th>
+          <th>Dept</th>
+          <th class="num">Sem</th>
+          <th>Overall</th>
+          <th class="num">Courses &lt; 75%</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in rows %}
+        <tr>
+          <td>
+            {% if s.has_photo %}
+              <img class="avatar" src="{{ url_for('student_photo', student_id=s.student_id) }}" alt="">
+            {% else %}
+              <span class="avatar"></span>
+            {% endif %}
+          </td>
+          <td><strong>{{ s.roll_no }}</strong></td>
+          <td><a href="{{ url_for('student_detail', student_id=s.student_id) }}">{{ s.name }}</a></td>
+          <td><span class="badge">{{ s.dept_code }}</span></td>
+          <td class="num">{{ s.semester }}</td>
+          <td style="min-width:130px">{{ s.pct|pct }}{{ bar(s.pct, s.status) }}</td>
+          <td class="num">{{ s.critical_courses }}</td>
+          <td>{{ badge(s.status) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ render_pagination(pagination, 'students') }}
+  {% else %}
+    <p class="empty">No students found matching your criteria. <a href="{{ url_for('register_student') }}">Register a new student</a>.</p>
+  {% endif %}
+</div>
+{% endblock %}
