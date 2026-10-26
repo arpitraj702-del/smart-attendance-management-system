@@ -1,4 +1,5 @@
 """Thin MySQL helper: one pooled connection per Flask request."""
+import os
 from contextlib import contextmanager
 from decimal import Decimal
 
@@ -13,19 +14,24 @@ _pool = None
 def _get_pool():
     global _pool
     if _pool is None:
-        _pool = pooling.MySQLConnectionPool(
-            pool_name="attendance_pool",
-            pool_size=8,
-            pool_reset_session=True,
-            host=Config.DB_HOST,
-            port=Config.DB_PORT,
-            user=Config.DB_USER,
-            password=Config.DB_PASSWORD,
-            database=Config.DB_NAME,
-            charset="utf8mb4",
-            autocommit=True,   # every statement commits; use transaction() for groups
-            use_pure=True,
-        )
+        pool_kwargs = {
+            "pool_name": "attendance_pool",
+            "pool_size": 8,
+            "pool_reset_session": True,
+            "host": Config.DB_HOST,
+            "port": Config.DB_PORT,
+            "user": Config.DB_USER,
+            "password": Config.DB_PASSWORD,
+            "database": Config.DB_NAME,
+            "charset": "utf8mb4",
+            "autocommit": True,   # every statement commits; use transaction() for groups
+            "use_pure": True,
+            "ssl_disabled": False,
+        }
+        if Config.DB_SSL_CA and os.path.exists(Config.DB_SSL_CA):
+            pool_kwargs["ssl_ca"] = Config.DB_SSL_CA
+
+        _pool = pooling.MySQLConnectionPool(**pool_kwargs)
     return _pool
 
 

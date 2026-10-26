@@ -28,12 +28,15 @@ COPY . /app
 # Ensure uploads and models directory exist
 RUN mkdir -p /app/uploads/faces /app/models
 
+# Download face detection and recognition ONNX models during build
+RUN python download_models.py
+
 # Expose web service port
 EXPOSE 5000
 
 # Health check to ensure Flask server is responsive
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:5000/login || exit 1
+  CMD curl -f http://localhost:${PORT:-5000}/login || exit 1
 
 # Run database migration on container start followed by app server
 CMD ["sh", "-c", "python setup_db.py && python migrate.py && python app.py"]

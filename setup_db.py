@@ -52,15 +52,31 @@ def main():
     ap.add_argument("--yes", action="store_true", help="skip the confirmation for --reset")
     args = ap.parse_args()
 
+    conn_kwargs = {
+        "host": Config.DB_HOST,
+        "port": Config.DB_PORT,
+        "user": Config.DB_USER,
+        "password": Config.DB_PASSWORD,
+        "database": Config.DB_NAME,
+        "autocommit": True,
+        "use_pure": True,
+        "ssl_disabled": False,
+    }
+    if Config.DB_SSL_CA and Path(Config.DB_SSL_CA).exists():
+        conn_kwargs["ssl_ca"] = Config.DB_SSL_CA
+
     try:
-        conn = mysql.connector.connect(
-            host=Config.DB_HOST, port=Config.DB_PORT, user=Config.DB_USER,
-            password=Config.DB_PASSWORD, autocommit=True, use_pure=True, ssl_disabled=False,
-        )
-    except mysql.connector.Error as exc:
-        print(f"\nCould not connect to MySQL: {exc}")
-        print("Check that the MySQL service is running and DB_HOST / DB_USER / DB_PASSWORD in .env are correct.")
-        sys.exit(1)
+        conn = mysql.connector.connect(**conn_kwargs)
+    except mysql.connector.Error:
+        # Fallback to connecting without database (e.g. initial setup on uninitialized local MySQL)
+        fallback_kwargs = dict(conn_kwargs)
+        fallback_kwargs.pop("database", None)
+        try:
+            conn = mysql.connector.connect(**fallback_kwargs)
+        except mysql.connector.Error as exc:
+            print(f"\nCould not connect to MySQL: {exc}")
+            print("Check that the MySQL service is running and DB_HOST / DB_USER / DB_PASSWORD in .env are correct.")
+            sys.exit(1)
 
     cur = conn.cursor()
     name = Config.DB_NAME
@@ -69,9 +85,18 @@ def main():
             if not args.yes and input(f"Type YES to delete database '{name}': ").strip() != "YES":
                 print("Cancelled.")
                 return
-            cur.execute(f"DROP DATABASE IF EXISTS `{name}`")
-        cur.execute(f"CREATE DATABASE IF NOT EXISTS `{name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
-        cur.execute(f"USE `{name}`")
+            try:
+                cur.execute(f"DROP DATABASE IF EXISTS `{name}`")
+            except mysql.connector.Error:
+                pass
+        try:
+            cur.execute(f"CREATE DATABASE IF NOT EXISTS `{name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+        except mysql.connector.Error:
+            pass  # Cloud MySQL instances often disallow CREATE DATABASE at the user level
+        try:
+            cur.execute(f"USE `{name}`")
+        except mysql.connector.Error:
+            pass
         run_file(cur, BASE / "schema.sql")
         print("Schema created.")
         ensure_migration_table(cur)

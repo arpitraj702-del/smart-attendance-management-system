@@ -4,7 +4,9 @@ Works side-by-side with db.py (raw MySQL connector):
 - SQLAlchemy ORM is used for type-safe CRUD operations, model validation, and entity updates.
 - db.py is used for direct SQL reporting views, bulk matrix operations, and stored procedures.
 """
+import os
 from contextlib import contextmanager
+from urllib.parse import quote_plus
 
 from flask import g
 from sqlalchemy import create_engine
@@ -19,13 +21,19 @@ _SessionFactory = None
 def get_engine():
     global _engine
     if _engine is None:
-        # Use mysqlconnector driver that is already tested and operational
+        safe_user = quote_plus(Config.DB_USER)
+        safe_password = quote_plus(Config.DB_PASSWORD)
         connection_url = (
-            f"mysql+mysqlconnector://{Config.DB_USER}:{Config.DB_PASSWORD}"
+            f"mysql+mysqlconnector://{safe_user}:{safe_password}"
             f"@{Config.DB_HOST}:{Config.DB_PORT}/{Config.DB_NAME}?charset=utf8mb4"
         )
+        connect_args = {"ssl_disabled": False}
+        if Config.DB_SSL_CA and os.path.exists(Config.DB_SSL_CA):
+            connect_args["ssl_ca"] = Config.DB_SSL_CA
+
         _engine = create_engine(
             connection_url,
+            connect_args=connect_args,
             pool_size=8,
             max_overflow=4,
             pool_recycle=3600,

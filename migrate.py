@@ -41,16 +41,19 @@ def split_sql(text):
 
 
 def get_connection():
-    return mysql.connector.connect(
-        host=Config.DB_HOST,
-        port=Config.DB_PORT,
-        user=Config.DB_USER,
-        password=Config.DB_PASSWORD,
-        database=Config.DB_NAME,
-        autocommit=True,
-        use_pure=True,
-        ssl_disabled=False,
-    )
+    conn_kwargs = {
+        "host": Config.DB_HOST,
+        "port": Config.DB_PORT,
+        "user": Config.DB_USER,
+        "password": Config.DB_PASSWORD,
+        "database": Config.DB_NAME,
+        "autocommit": True,
+        "use_pure": True,
+        "ssl_disabled": False,
+    }
+    if Config.DB_SSL_CA and Path(Config.DB_SSL_CA).exists():
+        conn_kwargs["ssl_ca"] = Config.DB_SSL_CA
+    return mysql.connector.connect(**conn_kwargs)
 
 
 def ensure_migration_table(cur):

@@ -25,6 +25,7 @@ class Config:
     DB_USER = os.getenv("DB_USER", "root")
     DB_PASSWORD = os.getenv("DB_PASSWORD", "")
     DB_NAME = os.getenv("DB_NAME", "smart_attendance")
+    DB_SSL_CA = os.getenv("DB_SSL_CA", "")
 
     # --- Initial Bootstrap (used only on first database initialization) -
     ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
