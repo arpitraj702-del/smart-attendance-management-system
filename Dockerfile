@@ -36,4 +36,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:5000/login || exit 1
 
 # Run database migration on container start followed by app server
-CMD ["sh", "-c", "python migrate.py && python app.py"]
+CMD ["sh", "-c", "python setup_db.py && python migrate.py && python app.py"]
