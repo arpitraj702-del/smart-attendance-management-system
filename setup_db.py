@@ -55,7 +55,7 @@ def main():
     try:
         conn = mysql.connector.connect(
             host=Config.DB_HOST, port=Config.DB_PORT, user=Config.DB_USER,
-            password=Config.DB_PASSWORD, autocommit=True, use_pure=True,
+            password=Config.DB_PASSWORD, autocommit=True, use_pure=True, ssl_disabled=False,
         )
     except mysql.connector.Error as exc:
         print(f"\nCould not connect to MySQL: {exc}")

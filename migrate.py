@@ -49,6 +49,7 @@ def get_connection():
         database=Config.DB_NAME,
         autocommit=True,
         use_pure=True,
+        ssl_disabled=False,
     )
 
 
