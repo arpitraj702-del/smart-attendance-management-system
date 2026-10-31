@@ -184,9 +184,4 @@ The system was verified against a live local **MySQL 8.0.40** instance on Window
 
 ---
 
-## 8. Limitations & Viva Speaking Points
 
-When presenting this project:
-1. **Liveness Detection:** The computer vision pipeline utilizes single-frame YuNet detection and SFace cosine similarity. While it features consecutive-frame streak confirmation (`CONFIRM_FRAMES=2`), physical classroom supervision is recommended to prevent photo/screen spoofing.
-2. **Lighting Sensitivity:** Accuracy depends on ambient illumination. For optimal results, student face registrations should be performed under typical classroom lighting conditions.
-3. **Dual Persistence Justification:** Highlight the deliberate engineering rationale behind combining SQLAlchemy ORM (for entity domain safety) and raw pooled MySQL Connector (for high-speed frame-rate video ingestion).
