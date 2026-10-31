@@ -107,8 +107,8 @@ Open **<http://127.0.0.1:5000>** in your web browser (Chrome or Edge recommended
 
 | Role | Username | Initial Password | Permissions & Access Scope |
 | :--- | :--- | :--- | :--- |
-| **Admin** | `admin` | `Admin@12345` | Full administrative control: User management, Departments, Faculty, Courses, Students, Exam Scheduling, System Settings. |
-| **Faculty** | `anita_rao` | `Faculty@123` | Scoped faculty access: Courses assigned to faculty member, starting/taking live attendance for their sessions, viewing their student rosters. |
+| **Admin** | `admin` | `admin123` | Full administrative control: User management, Departments, Faculty, Courses, Students, Exam Scheduling, System Settings. |
+| **Faculty** | `anita_rao` | `faculty123` | Scoped faculty access: Courses assigned to faculty member, starting/taking live attendance for their sessions, viewing their student rosters. |
 
 *Security Tip: Change initial passwords immediately upon first login via the User Management interface.*
 
